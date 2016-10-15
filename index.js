@@ -1,9 +1,42 @@
-let hAndS = require('./hidenseek.js');
+let hAndS = require('./hidenseek.js'),
+    pokemon = require('./pokemon.js');
 
-console.log(hAndS.hide('.\\field\\', [
-  {name:'fsdfgb', level:15},
-  {name:'uouikmj', level:4},
-  {name:'fsdgasgdfgb', level:6},
-  {name:'dageer', level:8},
-  {name:'.iuo', level:9}
-]));
+if (!process.argv[2]) {
+  console.log(`node index hide path pokemons - используйте для того,
+     чтобы спрятать в папке 'path' покемонов из 'pokemons'`);
+  console.log(`node index seek path - используйте для того,
+    чтобы найти в папке 'path' покемонов`);
+}
+else {
+  if (!process.argv[3]){
+    console.log("Нужен 'path'");
+  }
+  else {
+    if (process.argv[2] == "hide"){
+      if (!process.argv[4]){
+        console.log("Нужен файл с покемонами");
+      }
+      else{
+        let fs = require("fs");
+
+        fs.readFile(process.argv[4], { encoding: 'utf-8'}, (err, text) => {
+          if (err) console.log('Файл с покемонами не найден');
+          let pokemons = require('./pokemon.json');
+
+          for (let i=0; i < pokemons.length; i++){
+            pokemons[i] = new pokemon.pokemon(
+              pokemons[i].name, pokemons[i].level
+            );
+          }
+
+          hAndS.hide('.\\field\\', pokemons)
+          .then((pokemons) => pokemons.show());
+        });
+      }
+    }
+    else {
+      hAndS.seek('.\\field\\')
+      .then((pokemons) => pokemons.show());
+    }
+  }
+}
