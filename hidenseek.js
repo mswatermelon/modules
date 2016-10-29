@@ -26,7 +26,7 @@ showFile = (file) => {
         pokemons.push(new_pokemon);
       }
     }
-    fs.unlink(file);
+    fs.unlinkSync(file);
     resolve(pokemons);
   });
 },
@@ -76,20 +76,30 @@ updatePokemonList = (values) => {
   }
 
   return pokemons;
+},
+createRandomList = (start, end, number) => {
+  let arr = [];
+
+  for(let i = 0; i < number;){
+    let val = getRandomInt(start, end);
+
+    if (arr.indexOf(val) == -1) {
+      arr.push(val);
+      i++;
+    }
+  }
+
+  return arr;
 };
+
 
 module.exports.hide = (path, pokemonList) => {
 	let number = pokemonList.length>=3?3:pokemonList.length,
-			keys = [],
-			paths = [],
+			keys = createRandomList(0, pokemonList.length-1, number),
+			paths = createRandomList(1, pokemonList.length, number),
       promises = [],
       returnedList = new pokemon.pokemonList(),
 			file;
-
-  for(let i = 0; i < number; i++){
-		keys.push(getRandomInt(0, pokemonList.length-1));
-		paths.push(getRandomInt(1, pokemonList.length));
-	}
 
   createDir(path);
 
