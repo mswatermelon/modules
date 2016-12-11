@@ -23,11 +23,11 @@ else {
           if (err) console.log('Файл с покемонами не найден');
           let pokemons = require('./pokemon.json');
 
-          for (let i=0; i < pokemons.length; i++){
-            pokemons[i] = new pokemon.pokemon(
-              pokemons[i].name, pokemons[i].level
+          pokemons.forEach(function(item, i, arr){
+            arr[i] = new pokemon.pokemon(
+              item.name, item.level
             );
-          }
+          });
 
           hAndS.hide('.\\field\\', pokemons)
           .then((pokemons) => pokemons.show());
@@ -35,8 +35,11 @@ else {
       }
     }
     else {
+      // console.log('hAndS', hAndS.seek('.\\field\\'));
       hAndS.seek('.\\field\\')
-      .then((pokemons) => pokemons.show());
+      .then((pokemons) => {
+        pokemons.show()
+      });
     }
   }
 }

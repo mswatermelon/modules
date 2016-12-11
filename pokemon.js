@@ -13,7 +13,11 @@ class Pokemon {
 
 class PokemonList extends Array {
   constructor(...pokemons) {
-    super(...pokemons);
+    let truePokemons = pokemons.filter((pokemon) => {
+      return pokemon instanceof Pokemon;
+    });
+
+    super(...truePokemons);
   }
   add(name, level) {
     let childPokemon = new Pokemon(name, level);
@@ -21,21 +25,17 @@ class PokemonList extends Array {
   }
   show(){
       console.log(`Покемонов в списке ${this.length}.`);
-      for (let pokemon of this){
-        pokemon.show();
-      }
+      this.forEach((element) => {
+        element.show();
+      });
   }
   max(){
     let max = Math.max(...this);
 
-    if (!isNaN(max) && max >= 0) {
-      for (let pokemon of this){
-         if (pokemon == max) pokemon.show();
-      }
-    }
-    else {
-      console.log('Список пуст');
-    }
+    return this.find((element) => {
+      if (element == max) return true;
+      else return false;
+    });
   }
 }
 

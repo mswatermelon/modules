@@ -5,29 +5,39 @@ let getRandomInt =  (min, max) => {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 },
 createDir = (path) => {
-  try{
-    fs.accessSync(path, fs.F_OK);
-  }
-  catch(e){
-     fs.mkdirSync(path);
-   }
+  return new Promise((resolve,reject) => {
+    fs.access(path, fs.F_OK, (err) => {
+      if (err) {
+        fs.mkdir(path, (err) => {
+          if (err) return reject(err);
+
+          resolve();
+        });
+      }
+
+      resolve();
+    });
+  });
 },
 showFile = (file) => {
   return new Promise((resolve,reject) => {
-    let text = fs.readFileSync(file, { encoding: 'utf-8'}),
-        new_pokemons = text.split('\n'),
-        pokemons = new pokemon.pokemonList();
+    fs.readFile(file, { encoding: 'utf-8'}, (err, text) => {
+      if (err) return reject(err);
+      let new_pokemons = text.split('\n'),
+          pokemons = new pokemon.pokemonList();
 
-    for(let row of new_pokemons){
-      if(row){
-        let data = row.split('|'),
-            new_pokemon = new pokemon.pokemon(data[0], parseInt(data[1]));
+      for(let row of new_pokemons){
+        if(row){
+          let data = row.split('|'),
+              new_pokemon = new pokemon.pokemon(data[0], parseInt(data[1]));
 
-        pokemons.push(new_pokemon);
+          pokemons.push(new_pokemon);
+        }
       }
-    }
-    fs.unlinkSync(file);
-    resolve(pokemons);
+      fs.unlink(file, (err) => {
+        resolve(pokemons);
+      })
+    });
   });
 },
 showFiles = (files, newPath) => {
@@ -41,32 +51,37 @@ showFiles = (files, newPath) => {
 },
 createFile = (newPath, new_pokemon) => {
   return new Promise((resolve, reject) => {
-      let file = fs.appendFileSync(
+      let file = fs.appendFile(
         `${newPath}\\pokemon.txt`,
-        `${new_pokemon.name}|${new_pokemon.level}\n`
+        `${new_pokemon.name}|${new_pokemon.level}\n`,
+        (err) => {
+          if (err) return reject(err);
+          resolve();
+        }
       );
-
-      resolve();
   });
 },
 createDirForFile = (newPath, new_pokemons, i, keys, paths) => {
-  let promises = [];
-  createDir(newPath);
+  return new Promise((resolve, reject) => {
+    let promises = [];
 
-  for (let j=0; j<paths.length; j++){
-    if(i == paths[j]){
-      let pokemons = new pokemon.pokemonList();
+    createDir(newPath).then(() => {
+      paths.forEach(function(item, j){
+        if(i == item){
+          let pokemons = new pokemon.pokemonList();
 
-      promises.push(createFile(newPath, new_pokemons[keys[j]])
-        .then(() => {
-          pokemons.push(new_pokemons[keys[j]]);
-          return(pokemons);
-        })
-      )
-    }
-  }
+          promises.push(createFile(newPath, new_pokemons[keys[j]])
+            .then(() => {
+              pokemons.push(new_pokemons[keys[j]]);
+              return(pokemons);
+            })
+          )
+        }
+      });
 
-  return Promise.all(promises);
+      resolve(Promise.all(promises));
+    });
+  });
 },
 updatePokemonList = (values) => {
   let pokemons = new pokemon.pokemonList();
@@ -94,44 +109,71 @@ createRandomList = (start, end, number) => {
 
 
 module.exports.hide = (path, pokemonList) => {
-	let number = pokemonList.length>=3?3:pokemonList.length,
-			keys = createRandomList(0, pokemonList.length-1, number),
-			paths = createRandomList(1, pokemonList.length, number),
-      promises = [],
-      returnedList = new pokemon.pokemonList(),
-			file;
+  return new Promise((resolve, reject) => {
+  	let number = pokemonList.length>=3?3:pokemonList.length,
+  			keys = createRandomList(0, pokemonList.length-1, number),
+  			paths = createRandomList(1, pokemonList.length, number),
+        promises = [],
+        returnedList = new pokemon.pokemonList(),
+  			file;
 
-  createDir(path);
+    createDir(path).then(() => {
+    	for(let i = 1; i <= 10; i++ ){
+    		let newPath = path + (i==10?i.toString():'0'+i);
 
-	for(let i = 1; i <= 10; i++ ){
-		let newPath = path + (i==10?i.toString():'0'+i);
+        promises.push(createDirForFile(newPath, pokemonList, i, keys, paths)
+        .then(values => {
+          return updatePokemonList(values);
+        }));
+    	}
 
-    promises.push(createDirForFile(newPath, pokemonList, i, keys, paths)
-    .then(values => {
-      return updatePokemonList(values);
-    }));
-	}
-
-  return Promise.all(promises).then(values => {
-    return updatePokemonList(values);
+      resolve(Promise.all(promises).then(values => {
+          return updatePokemonList(values);
+      }));
+    });
   });
 }
 
-module.exports.seek = (path) => {
-    let tenDirs = fs.readdirSync(path),
-        promises = [];
+let readDir = (path) => {
+  return new Promise((resolve, reject) => {
+      fs.readdir(path, (err, files) => {
+        if (err) return reject(err);
 
-    for (let file of tenDirs){
-      let newPath = path + file,
-          files = fs.readdirSync(newPath);
+        resolve(files);
+      })
+  });
+};
 
-      promises.push(showFiles(files, newPath)
-      .then(values => {
-        return updatePokemonList(values);
-      }));
-    }
+let getAllPromises = (path) => {
+  return new Promise((resolve, reject) => {
+    let promises = [];
+    let promises2 = [];
 
-    return Promise.all(promises).then(values => {
-      return updatePokemonList(values);
+    readDir(path).then((tenDirs) => {
+      for (let file of tenDirs){
+        let newPath = path + file;
+
+        promises2.push(readDir(newPath).then((files) => {
+          promises.push(showFiles(files, newPath)
+          .then(values => {
+            return updatePokemonList(values);
+          }));
+        })
+      );
+      }
+      Promise.all(promises2).then(() => {
+        resolve(promises);
+      })
     });
+  });
+};
+
+module.exports.seek = (path) => {
+  return new Promise((resolve, reject) => {
+    getAllPromises(path).then((promises) => {
+      return Promise.all(promises).then(values => {
+        resolve(updatePokemonList(values));
+      });
+    });
+  });
 }
